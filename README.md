@@ -67,6 +67,28 @@ jar -cvfe qwen2.jar Qwen2 LICENSE -C target/classes .
 Run the resulting `qwen2.jar` as follows:
 ```bash
 java -jar qwen2.jar --help
+java -jar qwen2.jar --model Qwen2-1.5B-Instruct-Q8_0.gguf --chat
+
+```
+
+#### Native Image
+
+Build a native image:
+
+```bash
+native-image -jar qwen2.jar -o qwen2
+```
+
+Run:
+
+```bash
+./qwen2 --help
+```
+
+For example:
+
+```bash
+./qwen2 --model Qwen2-1.5B-Instruct-Q8_0.gguf --chat
 ```
 
 ## License
