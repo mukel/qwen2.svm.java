@@ -61,7 +61,7 @@ java Qwen2.java --model Qwen2-1.5B-Instruct-Q8_0.gguf --chat
 A simple [Makefile](./Makefile) is provided, run `make` to produce `qwen2.jar` or manually:
 ```bash
 javac -g -d target/classes Qwen2.java
- jar -cvfe qwen2.jar com.llama4j.Qwen2 LICENSE -C target/classes .
+jar -cvfe qwen2.jar com.llama4j.Qwen2 LICENSE -C target/classes .
 ```
 
 Run the resulting `qwen2.jar` as follows:
