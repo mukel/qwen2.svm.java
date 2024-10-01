@@ -1,5 +1,5 @@
 ///usr/bin/env jbang "$0" "$@" ; exit $?
-//JAVA 21+
+//JAVA 21+    
 
 // Practical Qwen2 inference in a single Java file
 // Author: Alfonso² Peterssen
@@ -148,7 +148,7 @@ public class Qwen2 {
         }
     }
 
-    record Options(Path modelPath, String prompt, String systemPrompt, String suffix, boolean interactive,
+    record Options(Path[] modelPath, String prompt, String systemPrompt, String suffix, boolean interactive,
                    float temperature, float topp, long seed, int maxTokens, boolean stream, boolean echo) {
 
         Options {
@@ -195,7 +195,7 @@ public class Qwen2 {
             String suffix = null;
             float temperature = 0.1f;
             float topp = 0.95f;
-            Path modelPath = null;
+            Path[] modelPath = null;
             long seed = System.nanoTime();
             // Mistral models have a rather large context (> 32k)
             // Cap max context length at 512 to run out-of-the-box on low memory devices
@@ -231,7 +231,7 @@ public class Qwen2 {
                             case "--suffix" -> suffix = nextArg;
                             case "--temperature", "--temp" -> temperature = Float.parseFloat(nextArg);
                             case "--top-p" -> topp = Float.parseFloat(nextArg);
-                            case "--model", "-m" -> modelPath = Paths.get(nextArg);
+                            case "--model", "-m" -> modelPath = Arrays.stream(nextArg.split(",")).map(Paths::get).toArray(Path[]::new);
                             case "--seed", "-s" -> seed = Long.parseLong(nextArg);
                             case "--max-tokens", "-n" -> maxTokens = Integer.parseInt(nextArg);
                             case "--stream" -> stream = Boolean.parseBoolean(nextArg);
@@ -645,10 +645,15 @@ final class ModelLoader {
         return new Vocabulary(tokens, scores);
     }
 
-    public static Llama loadModel(Path ggufPath, int contextLength) throws IOException {
+    public static Llama loadModel(Path[] ggufPaths, int contextLength) throws IOException {
         try (var ignored = Timer.log("Load Qwen2 model")) {
-            GGUF gguf = GGUF.loadModel(ggufPath);
-            Map<String, Object> metadata = gguf.getMetadata();
+            Map<String, Object> metadata = HashMap.newHashMap(ggufPaths.length);
+            Map<String, GGMLTensorEntry> tensorEntries = HashMap.newHashMap(ggufPaths.length);
+            for (Path path : ggufPaths) {
+                GGUF gguf = GGUF.loadModel(path);
+                metadata.putAll(gguf.getMetadata());
+                tensorEntries.putAll(gguf.getTensorEntries());
+            }
 
             Vocabulary vocabulary = loadVocabulary(metadata);
             Qwen2Tokenizer tokenizer = createTokenizer(metadata, vocabulary);
@@ -674,8 +679,6 @@ final class ModelLoader {
                     (float) metadata.get("qwen2.attention.layer_norm_rms_epsilon"),
                     (float) metadata.get("qwen2.rope.freq_base")
             );
-
-            Map<String, GGMLTensorEntry> tensorEntries = gguf.getTensorEntries();
 
             Pair<float[], float[]> ropeFreqs = RoPE.precomputeFreqsCis(config.contextLength, config.headSize, config.ropeTheta);
             float[] ropeFreqsReal = ropeFreqs.first();
